@@ -5,7 +5,7 @@
 import { IDS, FB } from './emoji.js';
 
 let ENV, SET = null, ADM = null;
-const CUR = '৳';
+const CUR = '$'; // all amounts are in USDT
 const PLATFORMS = [
   ['telegram', 'Telegram'], ['tiktok', 'TikTok'], ['facebook', 'Facebook'],
   ['instagram', 'Instagram'], ['youtube', 'YouTube'], ['twitter', 'Twitter / X']
@@ -16,12 +16,12 @@ const DEFAULTS = {
   support_username: '',
   how_order: '1. Tap <b>Get Service</b>\n2. Choose platform, category and service\n3. Send your link and quantity\n4. Confirm the order. Done!',
   how_deposit: '1. Tap <b>Deposit</b>\n2. Choose a payment method\n3. Send money to the shown number\n4. Submit the amount and Transaction ID\n5. Your balance is added after admin approval.',
-  ref_percent: '5', min_deposit: '50', maintenance: 'off'
+  ref_percent: '5', min_deposit: '5', maintenance: 'off'
 };
 const SETKEYS = {
   welcome_text: 'Welcome Text', support_username: 'Support Username (without @)',
   how_order: 'How to Order Text', how_deposit: 'How to Deposit Text',
-  ref_percent: 'Referral Bonus %', min_deposit: 'Minimum Deposit', maintenance: 'Maintenance (on / off)'
+  ref_percent: 'Referral Bonus %', min_deposit: 'Minimum Deposit (USDT)', maintenance: 'Maintenance (on / off)'
 };
 const ST = { pending: '⏳', processing: '🔄', completed: '✅', canceled: '❌', failed: '⚠️' };
 
@@ -36,7 +36,7 @@ const B = (label, key, data, style) => {
 const ik = rows => ({ inline_keyboard: rows });
 const rk = rows => ({ keyboard: rows, resize_keyboard: true, is_persistent: true });
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const money = n => `${(+n || 0).toFixed(2)}${CUR}`;
+const money = n => { const v = +n || 0; return `${CUR}${v.toFixed(v === 0 || Math.abs(v) >= 1 ? 2 : 4)}`; };
 const norm = t => (t || '').toLowerCase().replace(/[^a-z]/g, '');
 const back = (to, label = 'Back') => [B(label, 'back', to)];
 
@@ -284,7 +284,7 @@ async function onCallback(c, data, user) {
     case 'pm': {
       const pm = await one('payment_methods', `id=eq.${p[1]}&select=*`);
       await setSt(c.uid, 'dep_amount', { pm: pm.name });
-      return show(c, `${E('payment')} <b>${esc(pm.name)}</b>\n━━━━━━━━━━━━━━\n${esc(pm.details)}\n\n${E('money')} Send the money, then type the <b>amount</b> you sent:`, ik([[B('Cancel', 'no', 'x', 'danger')]]));
+      return show(c, `${E('payment')} <b>${esc(pm.name)}</b>\n━━━━━━━━━━━━━━\n${esc(pm.details)}\n\n${E('money')} Send the money, then type the <b>amount in USDT</b> you sent:`, ik([[B('Cancel', 'no', 'x', 'danger')]]));
     }
   }
 }
@@ -485,7 +485,7 @@ async function adminCb(c, p) {
     }
     case 'pt': { const z = await one('payment_methods', `id=eq.${x}&select=active`); await upd('payment_methods', `id=eq.${x}`, { active: !z.active }); return adminCb(c, ['a', 'pv', x]); }
     case 'pd': await del('payment_methods', `id=eq.${x}`); return adminCb(c, ['a', 'pay']);
-    case 'padd': await setSt(c.uid, 'pm_name'); return show(c, `${E('plus')} Send the method <b>name</b> (e.g. bKash):`, ik([[B('Cancel', 'no', 'a:pay')]]));
+    case 'padd': await setSt(c.uid, 'pm_name'); return show(c, `${E('plus')} Send the method <b>name</b> (e.g. USDT TRC20):`, ik([[B('Cancel', 'no', 'a:pay')]]));
     // ----- providers -----
     case 'prov': {
       const pv = await q('providers', 'order=id&select=id,name');
@@ -656,7 +656,7 @@ const ADMIN_HELP = `<b>❓ Admin Help (বাংলায়)</b>
 
 <b>💳 Deposits:</b> ইউজার ডিপোজিট রিকোয়েস্ট করলে আপনি নোটিফিকেশন পাবেন। Approve করলে ব্যালেন্স অটো যোগ হবে এবং Referral বোনাস চলে যাবে। Reject করলে ইউজারকে জানানো হবে।
 
-<b>💳 Payment Methods:</b> bKash/Nagad ইত্যাদির নাম ও নাম্বার/নির্দেশনা এখান থেকে যোগ, ON/OFF বা Delete করুন।
+<b>💳 Payment Methods:</b> USDT (TRC20/BEP20) ইত্যাদির নাম ও ওয়ালেট অ্যাড্রেস/নির্দেশনা এখান থেকে যোগ, ON/OFF বা Delete করুন।
 
 <b>⚙️ Settings & Texts:</b> Welcome text, Support username, How to Order/Deposit টেক্সট, Referral %, Minimum Deposit, Maintenance mode (on/off) এখান থেকেই বদলান। কোড চেঞ্জ করা লাগবে না।
 
